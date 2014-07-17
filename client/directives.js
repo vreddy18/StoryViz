@@ -35,7 +35,6 @@ angular.module('storyviz.directives', ['d3'])
 
           scope.render = function(graphData) {
               // sort the links by source, then target
-              var lTotalLinkNum;
 
 
               var sortLinks = function() {               
@@ -128,11 +127,12 @@ angular.module('storyviz.directives', ['d3'])
                 .attr("fill", "none")
                 .attr("class", "link")
                 .attr("id", function(d){return d.type;})
-                .attr("stroke-width", 3)
+                .attr("stroke-width", 3);
+                console.log(svg.data(['end']));
 
                 svg.selectAll('#loves, #kills')
                 .attr("marker-end", "url(#end)");
-              console.log(path);
+
 
               svg.append("svg:defs").selectAll("marker")
                 .data(["end"])
@@ -168,16 +168,15 @@ angular.module('storyviz.directives', ['d3'])
                 .text(function(d) { return d.name; })
                 // .call(force.drag);
               // Use elliptical arc path segments to doubly-encode directionality.
-              console.log(lTotalLinkNum);
+        
               function tick() {
                   path.attr("d", function(d) {
                       var dx = d.target.x - d.source.x,
                           dy = d.target.y - d.source.y,
                           dr = Math.sqrt(dx * dx + dy * dy);
                       // get the total link numbers between source and target node
-                      lTotalLinkNum = mLinkNum[d.source.id + "," + d.target.id] || mLinkNum[d.target.id + "," + d.source.id];
-                      if(lTotalLinkNum > 1)
-                      {
+                      var lTotalLinkNum = mLinkNum[d.source.index + "," + d.target.index] || mLinkNum[d.target.index + "," + d.source.index];
+                      if(lTotalLinkNum > 1){
                           // if there are multiple links between these two nodes, we need generate different dr for each path
                           dr = dr/(1 + (1/lTotalLinkNum) * (d.linkindex - 1));
                       }     
