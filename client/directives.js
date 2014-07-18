@@ -20,23 +20,38 @@ angular.module('storyviz.directives', ['d3'])
           var refY = -Math.sqrt(cRadius) + 9;
           var drSub = cRadius + refY;
           var color = d3.scale.category20();
-
-
           var force = d3.layout.force()
             .charge(-650)
             .linkDistance(150)
             .size([width, height]);
 
-          var labelForce = d3.layout.force()
-            .charge(-100)
-            .linkDistance(0)
-            .linkStrength(8)
-            .size([width, height]);
+          scope.render = function(graphData) {    
+            var tick = function() {
+                path.attr("d", function(d) {
+                    var dx = d.target.x - d.source.x,
+                        dy = d.target.y - d.source.y,
+                        dr = Math.sqrt(dx * dx + dy * dy);
+                    // get the total link numbers between source and target node
+                    var lTotalLinkNum = mLinkNum[d.source.index + "," + d.target.index] || mLinkNum[d.target.index + "," + d.source.index];
+                    if(lTotalLinkNum > 1){
+                        // if there are multiple links between these two nodes, we need generate different dr for each path
+                        dr = dr/(1 + (1/lTotalLinkNum) * (d.linkindex - 1));
+                    }     
+                    // generate svg path
+                    return "M" + d.source.x + "," + d.source.y + 
+                        "A" + dr + "," + dr + " 0 0 1," + d.target.x + "," + d.target.y + 
+                        "A" + dr + "," + dr + " 0 0 0," + d.source.x + "," + d.source.y;  
+                });
+              
+                node.attr("transform", function(d) {
+                  return "translate(" + d.x + "," + d.y + ")";
+                });
 
-          scope.render = function(graphData) {
+                labels.attr("transform", function(d) {
+                  return "translate(" + d.x + "," + d.y + ")";
+                });
+            } 
               // sort the links by source, then target
-
-
               var sortLinks = function() {               
                  graphData.links.sort(function(a,b) {
                       if (a.source > b.source) {
@@ -60,8 +75,10 @@ angular.module('storyviz.directives', ['d3'])
               }
               
               //any links with duplicate source and target get an incremented 'linknum'
-              var setLinkIndexAndNum = function() {               
+              var setLinkIndexAndNum = function() {
                   for (var i = 0; i < graphData.links.length; i++) {
+                      var index = graphData.links[i].target + "," + graphData.links[i].source; 
+                                
                       if (i != 0 && graphData.links[i].source == graphData.links[i-1].source && graphData.links[i].target == graphData.links[i-1].target) {
                           graphData.links[i].linkindex = graphData.links[i-1].linkindex + 1;
                       }
@@ -69,58 +86,30 @@ angular.module('storyviz.directives', ['d3'])
                           graphData.links[i].linkindex = 1;
                       }
                       // save the total number of links between two nodes
-                      if(mLinkNum[graphData.links[i].target + "," + graphData.links[i].source] !== undefined) {
-                          console.log(mLinkNum[graphData.links[i].target + "," + graphData.links[i].source]);
-                          mLinkNum[graphData.links[i].target + "," + graphData.links[i].source] = graphData.links[i].linkindex;
+                      if(mLinkNum[index] !== undefined) {
+                          console.log(mLinkNum[index]);
+                          mLinkNum[index] = graphData.links[i].linkindex;
                       }
                       else{
                           mLinkNum[graphData.links[i].source + "," + graphData.links[i].target] = graphData.links[i].linkindex;
                       }
                   } 
-              }
-            // console.log(anchorLabels);
-              
+              }   
 
               var mLinkNum = {};
               
               // sort links first
               sortLinks(); 
-              // set up linkIndex and linkNumer, because it may possible multiple links share the same source and target node
+              // set up linkIndex and linkNumber, because it may possible multiple links share the same source and target node
               setLinkIndexAndNum();
+              console.log(graphData.links);
               console.log(JSON.stringify(mLinkNum));
               force.nodes(graphData.nodes)
                 .links(graphData.links)
                 .on("tick", tick)
                 .start();
 
-              // var labelAnchors = [];
-              // for(var i = 0; i < graphData.nodes.length; i++) {
-              //   labelAnchors.push({label: graphData.nodes[i].name});
-                
-              // };
-              // console.log(labelAnchors);
-
-              // labelForce.nodes(labelAnchors)
-              //   .on("tick", tick)
-              //   .start()
-
-              //   var anchorNode = svg.selectAll("g.anchorNode").data(labelAnchors).enter().append("svg:g").attr("class", "anchorNode");
-              //     anchorNode.append("svg:circle").attr("r", 0).style("fill", "#FFF");
-              //       anchorNode.append("svg:text").text(function(d) {
-              //       d.label
-              //     }).style("fill", "#666").style("font-family", "Arial").style("font-size", 12);
-      //             var updateNode = function() {
-      //   this.attr("transform", function(d) {
-      //     return "translate(" + d.x + "," + d.y + ")";
-      //   });
-
-      // }
-
-
-              // var arrowRel = graphData.links.filter(function(d, i) { return d.type === 'loves'})
-              //                 // .attr('class', 'loves');
-
-              // console.log(arrowRel);
+         
               var path = svg.append("svg:g").selectAll("path")
                 .data(force.links())
                 .enter().append("svg:path")
@@ -128,15 +117,15 @@ angular.module('storyviz.directives', ['d3'])
                 .attr("class", "link")
                 .attr("id", function(d){return d.type;})
                 .attr("stroke-width", 3);
-                console.log(svg.data(['end']));
+                console.log(force.links());
+
 
                 svg.selectAll('#loves, #kills')
                 .attr("marker-end", "url(#end)");
 
-
-              svg.append("svg:defs").selectAll("marker")
+              svg.append("defs").selectAll("marker")
                 .data(["end"])
-                  .enter().append("svg:marker")  
+                  .enter().append("marker")  
                     .attr("id", String)
                     // .attr("class", function(d){return d.type;})
                     .attr("viewBox", "0 -5 10 10")
@@ -147,8 +136,9 @@ angular.module('storyviz.directives', ['d3'])
                     .attr("stroke-width", 2)
                     .attr("markerHeight", markerHeight)
                     .attr("orient", "auto")
-                  .append("svg:path")
+                  .append("path")
                     .attr("d", "M0,-5L10,0L0,5");
+
 
               var gnodes = svg.selectAll('g.gnode')
                 .data(graphData.nodes)
@@ -168,95 +158,15 @@ angular.module('storyviz.directives', ['d3'])
                 .text(function(d) { return d.name; })
                 // .call(force.drag);
               // Use elliptical arc path segments to doubly-encode directionality.
-        
-              function tick() {
-                  path.attr("d", function(d) {
-                      var dx = d.target.x - d.source.x,
-                          dy = d.target.y - d.source.y,
-                          dr = Math.sqrt(dx * dx + dy * dy);
-                      // get the total link numbers between source and target node
-                      var lTotalLinkNum = mLinkNum[d.source.index + "," + d.target.index] || mLinkNum[d.target.index + "," + d.source.index];
-                      if(lTotalLinkNum > 1){
-                          // if there are multiple links between these two nodes, we need generate different dr for each path
-                          dr = dr/(1 + (1/lTotalLinkNum) * (d.linkindex - 1));
-                      }     
-                      // generate svg path
-                      return "M" + d.source.x + "," + d.source.y + 
-                          "A" + dr + "," + dr + " 0 0 1," + d.target.x + "," + d.target.y + 
-                          "A" + dr + "," + dr + " 0 0 0," + d.source.x + "," + d.source.y;  
-                  });
-                  
-                  
-                  // path.append("svg:title")
-                  //     .text(function(d, i) { return d.name; });
-
-
-        // anchorNode.each(function(d, i) {
-        //   if(i % 2 == 0) {
-        //     d.x = d.label.x;
-        //     d.y = d.label.y;
-        //   } else {
-        //     var b = this.childNodes[1].getBBox();
-
-        //     var diffX = d.x - d.label.x;
-        //     var diffY = d.y - d.label.y;
-
-        //     var dist = Math.sqrt(diffX * diffX + diffY * diffY);
-
-        //     var shiftX = b.width * (diffX - dist) / (dist * 2);
-        //     shiftX = Math.max(-b.width, Math.min(0, shiftX));
-        //     var shiftY = 5;
-        //     this.childNodes[1].setAttribute("transform", "translate(" + shiftX + "," + shiftY + ")");
-        //   }
-        // });
-
-   // anchorNode.attr("transform", function(d) {
-   //                    return "translate(" + d.x + "," + d.y + ")";
-   //                });
-
-
-
-        // anchorNode.call(updateNode);
-                  
-                  node.attr("transform", function(d) {
-                      return "translate(" + d.x + "," + d.y + ")";
-                  });
-
-                  labels.attr("transform", function(d) {
-            return "translate(" + d.x + "," + d.y + ")";
-        });
-              } 
               
-
-
-              //   function tick() {
-              //     // path.attr("x1", function(d) { return d.source.x; })
-              //     //     .attr("y1", function(d) { return d.source.y; })
-              //     //     .attr("x2", function(d) { return d.target.x; })
-              //     //     .attr("y2", function(d) { return d.target.y; });
-              //     path.attr("d", function(d) {
-              //     var dx = d.target.x - d.source.x,
-              //         dy = d.target.y - d.source.y,
-              //         dr = Math.sqrt(dx * dx + dy * dy);
-              //         return "M" + d.source.x + "," + d.source.y + "A" + (dr - drSub) + "," + (dr - drSub) + " 0 0,1 " + d.target.x + "," + d.target.y;
-              //     });
-              //     // gnodes.attr("transform", function(d) { 
-              //       // return "translate(" + d.x + "," + d.y + ")";
-              //     gnodes.attr("transform", function(d) { 
-              //       return 'translate(' + [d.x, d.y] + ')'; 
-              //     });
-              //     // node.attr("cx", function(d) { return d.x; })
-              //     //     .attr("cy", function(d) { return d.y; });
-              //   };
-              // // drawGraph();
           };
           
           scope.$watchGroup(['data','data.nodes', 'data.links'], function(newValue) {
             if (newValue !== undefined) {
-              d3.selectAll("svg > *").remove();
+              svg.selectAll('*').remove();
               scope.render(scope.data);
             }
-          });
+          }, true);
 
         });
       }
