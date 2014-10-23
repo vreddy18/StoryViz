@@ -4,6 +4,8 @@
   "description": "StoryViz visualizes the social networks in your favorite stories",
   "main": "server.js",
   "scripts": {
+    "build": "gulp",
+    "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
