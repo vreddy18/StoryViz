@@ -8,7 +8,7 @@ var q     = require('q');
 // todo: put this on a process variable:
 //       process.env['NEO4J_URL'] ||
 //       process.env['GRAPHENEDB_URL'] || localhost...
-var db = new neo4j.GraphDatabase('http://localhost:7474');
+var db = new neo4j.GraphDatabase(process.env['STORYVIZ_GRAPHENEDB_URL'] || 'http://localhost:7474');
 
 // tell DB to enforce unique character names, in the case that we're booting with
 // a new DB. If DB exists and this was already set, it will silently fail.
